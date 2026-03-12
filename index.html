@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot de Searmo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #c084fc;
+            --accent: #fbbf24;
+            --glass: rgba(15, 23, 42, 0.7);
+            --text: #fefce8;
+            --bot-msg: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: url('https://image.pollinations.ai/prompt/renaissance%20painting%20style%20landscape%20with%20soft%20clouds%20and%20distant%20classical%20buildings%20baroque%20aesthetic?width=1920&height=1080&nologo=true') center/cover no-repeat fixed;
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Capa de pintura barroca overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(30, 20, 10, 0.4), rgba(0, 0, 0, 0.2));
+            z-index: -1;
+        }
+
+        .app-container {
+            width: 95%;
+            max-width: 450px;
+            height: 85vh;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            position: relative;
+            animation: slideUp 1s ease-out;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        header {
+            padding: 30px 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: #d1d5db;
+            letter-spacing: 1px;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            scrollbar-width: none;
+        }
+        #chat-window::-webkit-scrollbar { display: none; }
+
+        .msg {
+            max-width: 85%;
+            padding: 14px 20px;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: fadeIn 0.4s ease;
+            position: relative;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; scale: 0.95; } to { opacity: 1; scale: 1; } }
+
+        .msg.bot { 
+            align-self: flex-start; 
+            background: var(--bot-msg); 
+            border: 1px solid rgba(255,255,255,0.05);
+            border-bottom-left-radius: 5px;
+            color: #fff;
+        }
+
+        .msg.user { 
+            align-self: flex-end; 
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-bottom-right-radius: 5px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Indicador de escritura */
+        .typing {
+            display: flex;
+            gap: 5px;
+            padding: 10px 15px;
+            background: var(--bot-msg);
+            border-radius: 20px;
+            width: fit-content;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .opt-btn {
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .opt-btn:hover { 
+            background: var(--accent); 
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .input-bar {
+            padding: 25px;
+            display: flex;
+            gap: 12px;
+            background: rgba(0,0,0,0.2);
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 16px 20px;
+            border-radius: 20px;
+            color: white;
+            outline: none;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--accent); background: rgba(255,255,255,0.12); }
+
+        #send-btn {
+            background: var(--accent);
+            color: #1e1b4b;
+            border: none;
+            padding: 0 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.3s;
+        }
+        #send-btn:hover { filter: brightness(1.2); scale: 1.05; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>Soy el asistente Yeiya</h1>
+            <p>Elegancia y Tecnología para SEARMO</p>
+        </header>
+
+        <div id="chat-window">
+            <!-- Los mensajes se cargarán dinámicamente -->
+        </div>
+
+        <div class="input-bar">
+            <input type="text" id="user-input" placeholder="Escriba aquí su consulta..." autocomplete="off">
+            <button id="send-btn">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DEL NEGOCIO
+        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycby3sVy0HpDuCMZ-1ryk9gIuV4hDbb0vmOpvhQp78_7vaFdh-ooWUgSl1fK7oTwn0g8M/exec"; 
+
+        const GREETINGS = [
+            "Sea cordialmente bienvenido. Soy **Yeiya**, su asistente personal de SEARMO. ¿Cómo puedo iluminar su visión hoy?",
+            "Es un honor recibirle. Soy **Yeiya**. Estoy aquí para transformar sus ideas en realidades digitales. ¿En qué puedo asistirle?",
+            "Bienvenido al futuro de SEARMO. Soy **Yeiya**. ¿Qué tesoro tecnológico desea descubrir en esta ocasión?",
+            "Un saludo distinguido. Soy **Yeiya**. Estoy a su entera disposición para elevar su negocio. ¿Comenzamos?",
+            "Es un privilegio saludarle. Soy **Yeiya**. ¿Busca elegancia o eficiencia? En SEARMO tenemos ambas. ¿En qué le apoyo?",
+            "¡Qué gusto tenerle aquí! Soy **Yeiya**. Mi propósito es guiarle hacia la excelencia digital. ¿Qué tiene en mente?",
+            "Sea bienvenido a esta experiencia de lujo. Soy **Yeiya**. ¿Desea conocer nuestros servicios o iniciar un presupuesto?",
+            "Un cordial saludo. Soy **Yeiya**. El arte y la tecnología se encuentran aquí para servirle. ¿Qué necesita hoy?",
+            "Es un placer atenderle. Soy **Yeiya**. ¿Cómo podemos automatizar su éxito en SEARMO hoy mismo?",
+            "Bienvenido. Soy **Yeiya**. Permítame asistirle con la distinción que su proyecto merece. ¿En qué puedo ayudar?",
+            "Qué alegría recibir su visita. Soy **Yeiya**. Estoy lista para asistirle con información o cotizaciones. ¿Por dónde empezamos?",
+            "Un saludo afectuoso. Soy **Yeiya**. Su visión es nuestra misión. ¿Qué servicios le gustaría explorar?",
+            "Sea bienvenido. Soy **Yeiya**. Permítame ser su guía en este viaje hacia la innovación. ¿Qué consulta tiene?",
+            "Es un honor. Soy **Yeiya**. En SEARMO creamos el mañana, hoy. ¿En qué puedo serle útil en este momento?",
+            "Bienvenido a la excelencia. Soy **Yeiya**. El conocimiento y la empatía están a su servicio. ¿Qué me diría?",
+            "Un saludo premium. Soy **Yeiya**. Transformamos PYMES en potencias tecnológicas. ¿Desea conocer cómo?",
+            "Sea muy bienvenido. Soy **Yeiya**. ¿Desea que hablemos de servicios, horarios o un presupuesto personalizado?",
+            "Es un gusto saludarle. Soy **Yeiya**. La tecnología más avanzada, con el trato más humano. ¿En qué le asisto?",
+            "Bienvenido al estudio digital de SEARMO. Soy **Yeiya**. ¿Cómo puedo facilitar su jornada este día?",
+            "Un saludo distinguido. Soy **Yeiya**. Estoy aquí para asegurar que su experiencia sea impecable. ¿Qué desea saber?"
+        ];
+
+        const KNOWLEDGE = {
+            'saludos': {
+                keywords: ["hola", "buen día", "buenos dias", "que tal", "saludos", "yeiya", "estas ahi"],
+                answer: "¡Un saludo cordial y muy afectuoso! Soy Yeiya, y es para mí un privilegio estar aquí para asistirle en todo lo que su negocio necesite. ¿En qué puedo iluminar su día hoy?"
+            },
+            'gracias': {
+                keywords: ["gracias", "agradezco", "excelente", "perfecto", "muy amable"],
+                answer: "¡No hay de qué agradecer! En SEARMO nos sentimos honrados de poder colaborar con personas con visión como usted. Siempre estaré aquí cuando me necesite."
+            },
+            'servicios': {
+                keywords: ["servicio", "hacen", "ofrecer", "propuesta", "ayudar", "ofreces", "productos", "puedes darme", "ofrecerme"],
+                answer: "Como su asistente de confianza, le comento que en SEARMO nos especializamos en transformar PYMES en piezas de arte tecnológico. Podemos ofrecerle:\n\n✨ **Artes Digitales**: Sitios web elegantes que capturan la esencia de su marca.\n✨ **Automatización**: Liberamos su tiempo creando flujos de trabajo que funcionan solos.\n✨ **Inteligencia**: Bots como yo, diseñados para cuidar a sus clientes con empatía.\n\n¿Le gustaría que profundice en alguno de estos tesoros tecnológicos?",
+                options: ['Ver Artes Digitales', 'Ver Automatización', 'Ver Bots Inteligentes']
+            },
+            'beneficios': {
+                keywords: ["beneficio", "ganar", "porque", "conviene", "mejor", "ayuda"],
+                answer: "Entiendo perfectamente su inquietud. Trabajar con SEARMO significa ganar tranquilidad. Automatizamos lo tedioso para que usted se enfoque en lo que ama, proyectando una imagen de lujo y modernidad que sus clientes adorarán. Es llevar su negocio al siguiente siglo con elegancia."
+            },
+            'horario': {
+                keywords: ["horario", "tiempo", "atienden", "dias", "cuando", "abierto"],
+                answer: "Estaré encantada de recibirle. Nuestro equipo de expertos le atenderá con toda su atención de **Lunes a Viernes**, de **9:00 AM a 6:00 PM**. Sin embargo, ¡yo siempre estaré aquí para recibir sus ideas!"
+            },
+            'quienes': {
+                keywords: ["quienes", "empresa", "somos", "quien", "searmo", "historia"],
+                answer: "SEARMO no es solo una empresa, es un estudio de artesanos digitales. Somos arquitectos que fusionan la estética clásica con la potencia de la IA para empoderar a los dueños de negocios como usted."
+            },
+            'cotizar': {
+                keywords: ["cotizar", "presupuesto", "precio", "costo", "cuanto", "quiero uno", "contratar"],
+                answer: "¡Qué noticia tan emocionante! Estoy ansiosa por formalizar esta unión. Para crear una propuesta que sea digna de su visión, por favor permítame hacerle unas breves preguntas. ¿Podemos comenzar?"
+            },
+            'artes': {
+                keywords: ["artes", "digitales", "diseño", "web", "pagina", "sitio"],
+                answer: "Nuestras **Artes Digitales** no son simples páginas web. Son lienzos interactivos diseñados para proyectar el lujo y la seriedad de su negocio. Utilizamos tipografía premium y efectos visuales que 'enamoran' al visitante desde el primer segundo.",
+                options: ['Cotizar Diseño', 'Volver al Menú']
+            },
+            'automatizacion': {
+                keywords: ["automatizacion", "procesos", "flujos", "tiempo", "ahorrar"],
+                answer: "Con la **Automatización**, hacemos que la tecnología trabaje por usted. Desde sistemas que agendan citas solos hasta flujos que envían reportes automáticamente. Es como tener un equipo trabajando para usted las 24 horas del día.",
+                options: ['Cotizar Automatización', 'Volver al Menú']
+            },
+            'bots': {
+                keywords: ["bots", "bot", "inteligencia", "ia", "chat", "agente"],
+                answer: "Nuestros **Bots Inteligentes** (como yo) son la vanguardia de la atención al cliente. No solo responden dudas, sino que detectan intenciones, guardan datos en su Google Sheets y dan una imagen de innovación absoluta.",
+                options: ['Quiero un Bot', 'Volver al Menú']
+            },
+            'volver': {
+                keywords: ["volver", "menu", "inicio", "atras"],
+                answer: "Ciertamente. Regresemos a los pilares de nuestra oferta. ¿En qué otro tesoro digital prefiere profundizar?",
+                options: ['Ver Artes Digitales', 'Ver Automatización', 'Ver Bots Inteligentes']
+            }
+        };
+
+        let currentState = 'IDLE'; 
+        let leadData = { nombre: '', telefono: '', correo: '', direccion: '', empresa: '', idea: '' };
+
+        // Memoria Persistente
+        let userName = localStorage.getItem('yeiya_user_name') || '';
+
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'typing';
+            div.id = 'typing-indicator';
+            div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function removeTyping() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function addMsg(text, type) {
+            const div = document.createElement('div');
+            div.className = 'msg ' + type;
+            div.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function addOptions(options) {
+            if (!options || options.length === 0) return;
+            const container = document.createElement('div');
+            container.className = 'options-container dynamic-options';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    // Limpiar opciones anteriores
+                    document.querySelectorAll('.dynamic-options').forEach(el => el.remove());
+                    addMsg(opt, 'user');
+                    handleInput(opt);
+                };
+                container.appendChild(btn);
+            });
+            chatWindow.appendChild(container);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function yeiyaResponse(text, options = []) {
+            showTyping();
+            setTimeout(() => {
+                removeTyping();
+                addMsg(text, 'bot');
+                if (options.length > 0) addOptions(options);
+            }, 1000 + Math.random() * 1000); // Retraso natural
+        }
+
+        function quickAction(action) {
+            if (action === 'servicios') {
+                addMsg("Deseo conocer los servicios que Yeiya y SEARMO ofrecen", "user");
+                const resp = KNOWLEDGE.servicios;
+                yeiyaResponse("Con todo gusto. Usted ha solicitado información sobre nuestras especialidades. " + resp.answer, ['Ver Artes Digitales', 'Ver Automatización', 'Ver Bots Inteligentes']);
+            } else if (action === 'horario') {
+                addMsg("¿En qué momento puedo hablar con el equipo?", "user");
+                yeiyaResponse("Excelente elección. Usted desea saber cuándo estamos disponibles. " + KNOWLEDGE.horario.answer);
+            } else if (action === 'presupuesto') {
+                addMsg("Es el momento de cotizar un proyecto", "user");
+                yeiyaResponse("Usted ha decidido dar el paso hacia la transformación. " + KNOWLEDGE.cotizar.answer);
+                setTimeout(() => startLeadFlow(), 2000);
+            }
+        }
+
+        function startLeadFlow() {
+            if (userName) {
+                leadData.nombre = userName;
+                currentState = 'ASK_PHONE';
+                yeiyaResponse(`¡Qué alegría verle de nuevo, **${userName}**! Como ya nos conocemos, pasemos directo a lo importante. ¿A qué **número telefónico** podemos contactarle para esta nueva propuesta?`);
+            } else {
+                currentState = 'ASK_NAME';
+                yeiyaResponse("Es un verdadero honor acompañarle en este primer paso. Dígame, para dirigirme a usted con la debida distinción, ¿cuál es su **Nombre completo**?");
+            }
+        }
+
+        async function handleSend() {
+            const text = userInput.value.trim();
+            if(!text) return;
+            addMsg(text, 'user');
+            userInput.value = '';
+            handleInput(text);
+        }
+
+        async function handleInput(text) {
+            if (text === "Finalizar Chat") {
+                location.reload();
+                return;
+            }
+            // Mapeo de botones rápidos para fluidez
+            if (text === "Ver Artes Digitales") { handleInput("artes"); return; }
+            if (text === "Ver Automatización") { handleInput("automatizacion"); return; }
+            if (text === "Ver Bots Inteligentes") { handleInput("bots"); return; }
+            if (text === "Volver al Menú") { handleInput("volver"); return; }
+            if (text === "Quiero un Bot" || text === "Cotizar Diseño" || text === "Cotizar Automatización") {
+                handleInput("cotizar"); return;
+            }
+
+            if(currentState === 'ASK_NAME') {
+                leadData.nombre = text;
+                userName = text;
+                localStorage.setItem('yeiya_user_name', text); // Yeiya "aprende" el nombre
+                currentState = 'ASK_PHONE';
+                yeiyaResponse(`Es un nombre encantador, ${text}. ¿Por qué medio **telefónico** le gustaría que nuestro equipo le contactara para compartir ideas?`);
+            } 
+            else if(currentState === 'ASK_PHONE') {
+                leadData.telefono = text;
+                currentState = 'ASK_EMAIL';
+                yeiyaResponse("¡Perfecto! Lo tengo anotado. Ahora, ¿me permitiría su **correo electrónico** para enviarle formalmente nuestra propuesta?");
+            }
+            else if(currentState === 'ASK_EMAIL') {
+                leadData.correo = text;
+                currentState = 'ASK_ADDRESS';
+                yeiyaResponse("Le agradezco su confianza. ¿En qué **ciudad o dirección** se encuentra su prestigioso negocio?");
+            }
+            else if(currentState === 'ASK_ADDRESS') {
+                leadData.direccion = text;
+                currentState = 'ASK_COMPANY';
+                yeiyaResponse("Entendido. Y por favor, ¿cómo se llama su **Empresa o Proyecto**? Me encantaría conocer su visión.");
+            }
+            else if(currentState === 'ASK_COMPANY') {
+                leadData.empresa = text;
+                currentState = 'ASK_IDEA';
+                yeiyaResponse("Magnífico. Finalmente, para soñar junto con usted: **¿Qué idea tiene en mente o qué proceso desea que ayudemos a automatizar?**");
+            }
+            else if(currentState === 'ASK_IDEA') {
+                leadData.idea = text;
+                currentState = 'CONFIRM_DATA';
+                const summary = `He recopilado lo siguiente:\n\n👤 **Nombre**: ${leadData.nombre}\n📞 **Teléfono**: ${leadData.telefono}\n📧 **Correo**: ${leadData.correo}\n📍 **Ubicación**: ${leadData.direccion}\n🏢 **Empresa**: ${leadData.empresa}\n💡 **Idea**: ${leadData.idea}\n\n¿Es correcta esta información? (Responda **SÍ** para enviar o **NO** para reiniciar)`;
+                yeiyaResponse(summary);
+            }
+            else if(currentState === 'CONFIRM_DATA') {
+                if(text.toLowerCase().includes('sí') || text.toLowerCase().includes('si')) {
+                    currentState = 'FINISHED';
+                    finishLeadFlow();
+                } else {
+                    currentState = 'IDLE';
+                    yeiyaResponse("No hay problema. He borrado los datos actuales. ¿Desea que comencemos de nuevo con la cotización?");
+                }
+            }
+            else {
+                const result = processLocalSearch(text);
+                yeiyaResponse(result.answer, result.options);
+            }
+        }
+
+        function processLocalSearch(q) {
+            // Normalizar texto (quitar acentos)
+            const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const query = normalize(q);
+            
+            let bestMatch = null;
+            let maxHits = 0;
+
+            for (let key in KNOWLEDGE) {
+                let hits = 0;
+                KNOWLEDGE[key].keywords.forEach(kw => {
+                    if (query.includes(normalize(kw))) hits++;
+                });
+                if (hits > maxHits) {
+                    maxHits = hits;
+                    bestMatch = key;
+                }
+            }
+
+            // Prioridad a servicios específicos si se mencionan palabras clave de acción
+            if (query.includes("quiero") || query.includes("cotizar") || query.includes("contratar")) {
+                if (query.includes("bot") || query.includes("ia") || query.includes("agente")) {
+                    setTimeout(() => startLeadFlow(), 2000);
+                    return { answer: "¡Excelente elección! Un Bot Inteligente elevará su atención al cliente. Iniciemos el proceso para su presupuesto.", options: [] };
+                }
+                if (query.includes("artes") || query.includes("diseño") || query.includes("web")) {
+                    setTimeout(() => startLeadFlow(), 2000);
+                    return { answer: "Sus Artes Digitales serán el rostro del éxito. Permítame tomar sus datos para la propuesta.", options: [] };
+                }
+                if (query.includes("auto") || query.includes("procesos") || query.includes("flujo")) {
+                    setTimeout(() => startLeadFlow(), 2000);
+                    return { answer: "La Automatización le devolverá su tiempo más valioso. Iniciemos con sus datos.", options: [] };
+                }
+                
+                setTimeout(() => startLeadFlow(), 1500);
+                return { answer: KNOWLEDGE.cotizar.answer, options: [] };
+            }
+
+            if (bestMatch === 'volver') {
+                return { answer: KNOWLEDGE.volver.answer, options: KNOWLEDGE.volver.options };
+            }
+
+            if (bestMatch) {
+                return { answer: KNOWLEDGE[bestMatch].answer, options: KNOWLEDGE[bestMatch].options || [] };
+            }
+
+            return { answer: "Comprendo su interés. Como su asistente Yeiya, estoy aquí para guiarle hacia el éxito. ¿Le gustaría que habláramos de nuestros servicios, horarios o iniciar una cotización?", options: ['Ver Artes Digitales', 'Ver Automatización', 'Ver Bots Inteligentes'] };
+        }
+
+        async function sendToGoogleSheets(data) {
+            if(!GOOGLE_SHEETS_URL) return;
+            try {
+                fetch(GOOGLE_SHEETS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) {
+                console.error("Link error", e);
+            }
+        }
+
+        function finishLeadFlow() {
+            sendToGoogleSheets(leadData);
+            setTimeout(() => {
+                yeiyaResponse("Ha sido un placer absoluto recolectar esta información para usted. Sus datos han sido resguardados en nuestra base de datos oficial de SEARMO.\n\nPronto, un experto de nuestro equipo se pondrá en contacto para convertir este sueño en realidad digital. ¿Hay algo más en lo que pueda asistirle en este momento?", ["Finalizar Chat"]);
+                currentState = 'IDLE';
+            }, 1000);
+        }
+
+        // Inicializar Yeiya
+        window.onload = () => {
+            const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+            yeiyaResponse(randomGreeting, ['Ver Servicios', 'Horarios', 'Cotizar Proyecto ✨']);
+        };
+
+        sendBtn.onclick = handleSend;
+        userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
+    </script>
+</body>
+</html>
