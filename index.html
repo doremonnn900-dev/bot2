@@ -221,6 +221,19 @@
     <script>
         // CONFIGURACIÓN DEL NEGOCIO
         const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycby3sVy0HpDuCMZ-1ryk9gIuV4hDbb0vmOpvhQp78_7vaFdh-ooWUgSl1fK7oTwn0g8M/exec"; 
+        const MAIN_PAGE_URL = "https://tu-pagina-web.com"; // Reemplaza con tu link real de SEARMO
+        const DISMISSAL_PHRASES = [
+            "No se preocupe en lo más mínimo, entiendo que a veces solo estamos explorando nuevas ideas. Estaré aquí cuando se sienta listo.",
+            "Totalmente de acuerdo. Tómese todo el tiempo que necesite para conocer lo que hacemos en SEARMO, sin ninguna prisa.",
+            "¡No hay ningún problema! Le agradezco mucho que nos haya dedicado un momento de su tiempo para conocernos hoy.",
+            "Comprendo perfectamente; no siempre es el momento de iniciar un proyecto. Lo importante es que ya sabe dónde encontrarnos.",
+            "Me parece perfecto. A veces un simple vistazo es suficiente para inspirar grandes cosas en el futuro. ¡Vuelva pronto!",
+            "No tiene de qué preocuparse. Mi propósito es informar y ayudar, nunca presionar. Que tenga un día maravilloso.",
+            "Entiendo muy bien su posición. Espero que lo poco o mucho que ha visto hoy de SEARMO le haya resultado interesante.",
+            "¡Claro que sí! La curiosidad es el motor de la innovación. Muchas gracias por haber pasado a saludarnos hoy.",
+            "Sin presiones de ningún tipo. Disfrute su día y sepa que en SEARMO siempre habrá un lugar para sus visiones digitales.",
+            "Entendido. Aprecio mucho que se haya tomado la molestia de decírmelo. Estaré encantada de asistirle si cambia de parecer."
+        ];
 
         const GREETINGS = [
             "Sea cordialmente bienvenido. Soy **Yeiya**, su asistente personal de SEARMO. ¿Cómo puedo iluminar su visión hoy?",
@@ -393,8 +406,20 @@
         }
 
         async function handleInput(text) {
-            if (text === "Finalizar Chat") {
+            if (text === "Finalizar Chat" || text === "Reiniciar Chat") {
                 location.reload();
+                return;
+            }
+            if (text === "Regresar a la Web") {
+                window.location.href = MAIN_PAGE_URL;
+                return;
+            }
+            if (text === "Cerrar Chat" || text === "Cerrar Ventana") {
+                yeiyaResponse("Ha sido un honor. Cerrando sesión segura...", []);
+                setTimeout(() => {
+                    window.open('', '_self', ''); 
+                    window.close();
+                }, 1500);
                 return;
             }
             // Mapeo de botones rápidos para fluidez
@@ -462,6 +487,15 @@
             let bestMatch = null;
             let maxHits = 0;
 
+            const triggerDismissal = ["no interesa", "no quiero", "no gracias", "solo conoc", "solo mir", "solo curio", "ninguno"];
+            if (triggerDismissal.some(word => query.includes(word))) {
+                const phrase = DISMISSAL_PHRASES[Math.floor(Math.random() * DISMISSAL_PHRASES.length)];
+                return { 
+                    answer: phrase + "\n\n¿Desea cerrar la conversación, regresar a nuestro sitio principal o reiniciar este diálogo?",
+                    options: ["Reiniciar Chat", "Cerrar Chat", "Regresar a la Web"]
+                };
+            }
+
             for (let key in KNOWLEDGE) {
                 let hits = 0;
                 KNOWLEDGE[key].keywords.forEach(kw => {
@@ -520,7 +554,7 @@
         function finishLeadFlow() {
             sendToGoogleSheets(leadData);
             setTimeout(() => {
-                yeiyaResponse("Ha sido un placer absoluto recolectar esta información para usted. Sus datos han sido resguardados en nuestra base de datos oficial de SEARMO.\n\nPronto, un experto de nuestro equipo se pondrá en contacto para convertir este sueño en realidad digital. ¿Hay algo más en lo que pueda asistirle en este momento?", ["Finalizar Chat"]);
+                yeiyaResponse("Ha sido un placer absoluto recolectar esta información para usted. Sus datos han sido resguardados en nuestra base de datos oficial de SEARMO.\n\nPronto, un experto de nuestro equipo se pondrá en contacto para convertir este sueño en realidad digital. ¿Desea cerrar este chat, regresar a la web o iniciar otra consulta?", ["Reiniciar Chat", "Cerrar Chat", "Regresar a la Web"]);
                 currentState = 'IDLE';
             }, 1000);
         }
